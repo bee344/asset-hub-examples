@@ -1,0 +1,14 @@
+{
+  "name": "asset-transfer-api-examples",
+  "packageManager": "yarn@3.6.1",
+  "scripts": {
+    "build": "substrate-exec-rimraf ./lib && substrate-exec-tsc",
+    "systemToParaReserve": "node ./lib/systemToParaReserveTransferForeignAssets.js",
+    "systemToParaTeleport": "node ./lib/systemToParaTeleport",
+    "systemToSystemLocal": "node ./lib/systemToSystemLocal"
+  },
+  "devDependencies": {
+    "@substrate/asset-transfer-api": "^0.1.7",
+    "@substrate/dev": "^0.7.1"
+  }
+}
