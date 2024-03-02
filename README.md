@@ -12,27 +12,22 @@ Beyond merely supporting assets, integrating an Asset Hub into your systems has 
 The Asset Hub will use DOT as its native currency. Users can transfer DOT from the Relay Chain into the Asset Hub and use it natively, and to the Relay Chain Asset Hub back to the Relay Chain for staking, governance, or any other activity.
 
 Using the Asset Hub for DOT balance transfers will be much more efficient than the Relay Chain and is highly recommended.
-## Assets Basics
+## Foreign Assets Basics
 
-Assets are stored as a map from an ID to information about the asset, including a management team, total supply, total number of accounts, its sufficiency for account existence, and more. Additionally, the asset owner can register metadata like the name, symbol, and number of decimals for representation.
-
-Some assets, as determined by on-chain governance, are regarded as “sufficient”.  Sufficiency means that the asset balance is enough to create the account on-chain, with no need for the DOT existential deposit. Likewise, you cannot send a non-sufficient asset to an account that does not exist. Sufficient assets can be used to pay transaction fees (i.e. there is no need to hold DOT on the account). Currentl
+Foreign Assets are stored as a map from an ID () to information about the asset, including a management team, total supply, total number of accounts, its sufficiency for account existence, and more. Additionally, the asset owner can register metadata like the name, symbol, and number of decimals for representation.
 
 Assets do have a minimum balance (set by the creator), and if an account drops below that balance, the dust is lost.
 
-### Asset Operations
+### Foreign Asset Operations
 
-The Assets pallet has its interface for dealing with assets. See the [Integration](#integration)
-section below for how to fetch information and construct transactions.
+The main functions you will probably interact with are `foreignAssets.transfer_allow_death` and `foreignAssets.transfer_keep_alive`. These functions transfer some `amount` (balance) of an `AssetId` (a `u32`, not a contract address) to another account.
 
-The main functions you will probably interact with are `transfer_allow_death` and `transfer_keep_alive`. These functions transfer some `amount` (balance) of an `AssetId` (a `u32`, not a contract address) to another account.
+The `foreign-assets` also provides an `approve_transfer`, `cancel_approval`, and `transfer_approved` interface for non-custodial operations.
 
-The Assets pallet also provides an `approve_transfer`, `cancel_approval`, and `transfer_approved` interface for non-custodial operations.
+Asset transfers will result in an `foreignAssets.transferred` event. The same instructions for
+[monitoring events and **not** transactions](https://wiki.polkadot.network/docs/build-protocol-info#events) applies to asset transfers.
 
-Asset transfers will result in an `assets.transferred` event. The same instructions for
-[monitoring events and **not** transactions](build-protocol-info.md#events) applies to asset transfers.
-
-Note that you can use the same addresses (except [pure proxies](../learn/learn-proxies-pure.md#anonymous-proxy-pure-proxy)!) on the Asset Hub that
+Note that you can use the same addresses (except [pure proxies](https://wiki.polkadot.network/docs/learn-proxies-pure#anonymous-proxy-pure-proxy)!) on the Asset Hub that
 you use on the Relay Chain. The SS58 encodings are the same; only the chain information (genesis hash, etc.) will change on transaction construction.
 
 ## Integration
@@ -41,7 +36,7 @@ The Asset Hub will come with the same tooling suite that Parity Technologies pro
 
 #### Asset Transfer API
 
-`Asset-transfer-api` is a library focused on simplifying the construction of asset transfers for Substrate-based chains that involve system parachains like Asset Hub. It exposes a reduced set of methods that facilitate users to send transfers to other (para) chains or locally. You can refer to [this table](https://github.com/paritytech/asset-transfer-api/tree/main#current-cross-chain-support) for the current cross-chain support and [here](https://paritytech.github.io/asset-transfer-api/) for
+`Asset-transfer-api` is a library focused on simplifying the construction of asset transfers for Substrate-based chains that involve system parachains like Asset Hub, and it can be used for foreign assets as well. It exposes a reduced set of methods that facilitate users to send transfers to other (para) chains or locally. You can refer to [this table](https://github.com/paritytech/asset-transfer-api/tree/main#current-cross-chain-support) for the current cross-chain support and [here](https://paritytech.github.io/asset-transfer-api/) for
 the complete documentation, including installation guide and usage examples.
 
 #### Sidecar
@@ -68,17 +63,16 @@ constructing parachain transactions, you can use `txwrapper-polkadot` exactly as
 
 ##### Monitoring of XCM deposits
 
-Thanks to XCM and a growing number of parachains, DOT can exist across several blockchains, which means the providers need to monitor cross-chain transfers on top of local transfers and corresponding `balances.transfer_*` events.
+Thanks to XCM and a growing number of parachains, asssets (and foreign assets) can exist across several blockchains, which means the providers need to monitor cross-chain transfers on top of local transfers and corresponding `foreignAssets.transfer_*` events.
 
-Currently DOT can be sent and received in the Relay Chain either with a [Teleport](https://wiki.polkadot.network/docs/learn-teleport) from
-[system parachains](https://wiki.polkadot.network/docs/learn-system-chains) or with a [Reserve Backed Transfer](https://wiki.polkadot.network/docs/learn-xcm-pallet#transfer-reserve-vs-teleport) from any other parachain. In both cases, the event emitted when processing the transfer is the `balances.deposit` event. Hence, providers should listen to these events, pointing to an address in their system. For this, the service provider must query every new block created, loop through the events array, filter for any `balances.deposit` event, and apply the appropriate business logic.
+Currently, foreign assets can be sent and received in the Asset Hub either with a [Reserve Backed Transfer](https://wiki.polkadot.network/docs/learn-xcm-pallet#transfer-reserve-vs-teleport) from any other parachain. In both cases, the event emitted when processing the transfer is the `foreignAssets.issued` event. Hence, providers should listen to these events, pointing to an address in their system. For this, the service provider must query every new block created, loop through the events array, filter for any `foreignAssets.issued` event, and apply the appropriate business logic.
 
 ##### Tracking back XCM information
 
-What has been mentioned earlier should be sufficient to confirm that DOT has arrived in a given account via XCM.
-However, in some cases, it may be interesting to identify the cross-chain message that emitted the relevant `balances.deposit` event. This can be done as follows:
+What has been mentioned earlier should be sufficient to confirm that a foreign asset has arrived in a given account via XCM.
+However, in some cases, it may be interesting to identify the cross-chain message that emitted the relevant `foreignAssets.issued` event. This can be done as follows:
 
-1. Query the Relay Chain `at` the block the `balances.deposit` event was emitted.
+1. Query the Relay Chain `at` the block the `foreignAssets.issued` event was emitted.
 2. Filter for a `messageQueue(Processed)` event, also emitted during block initialization. This
    event has a parameter `Id`. The value of `Id` identifies the cross-chain message received in the Relay Chain. It can be used to track back the message in the origin parachain if needed. Note that a block may contain several `messageQueue(Processed)` events corresponding to several cross-chain messages processed for this block.
 
@@ -86,41 +80,29 @@ However, in some cases, it may be interesting to identify the cross-chain messag
 
 The two previous sections outline the process of monitoring XCM deposits to specific account(s) and then tracing back the origin of these deposits. However, the process of tracking an XCM transfer (hence the events to look for) may vary based on the direction of the XCM message. Here are some examples to showcase the slight differences:
 
-1. For an XCM transfer from a Parachain to a Relay chain _([example](https://polkadot.subscan.io/xcm_message/polkadot-2f4138e73affe763bebbefa82ee2eb2633425541))_:
+1. For an XCM transfer from a System Parachain to a Parachain _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-ac190c9170b17a9dacb421d3d86c14d67892abe2))_:
 
-   - The [event](https://moonbeam.subscan.io/extrinsic/4531955-6?event=4531955-29) to look for in the Parachain side is called `parachainsystem (UpwardMessageSent)`, and the parameter `message_hash` in this event identifies the XCM transfer.
-   - The [event](https://polkadot.subscan.io/extrinsic/17487547-0?event=17487547-3) to track in the Relay chain side is called `messagequeue (Processed)`, and the parameter `id` of the event should be the same as the `message_hash` found in the Parachain event.
+   - The [event](https://assethub-polkadot.subscan.io/extrinsic/5768961-2?event=5768961-7) to look for in the System Parachain side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
+   - The corresponding [event](https://hydradx.subscan.io/extrinsic/4586604-1?event=4586604-7) in the Parachain side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in the System parachain.
+   - In the System Parachain we will also see the event `foreignAssets(Burned)` which indicates that the foreign assets transferred have been burnt on the System Chain.
 
-2. For an XCM transfer from a Relay chain to a Parachain _([example](https://polkadot.subscan.io/xcm_message/polkadot-9b01c2916c4d3c5ad01ee350bdda13059358981f))_:
+2. For an XCM transfer from a Parachain to a System Parachain _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-eb27d2225d2ccb3b979f8fb8a5241b7a9a8ee4d4))_:
 
-   - The [XCM Transfer Hash](https://polkadot.subscan.io/extrinsic/17487930-2?tab=xcm_transfer) is what we need to check on the Relay chain side.
-   - The [event](https://acala.subscan.io/extrinsic/4553422-1?event=4553422-5) to look for in the Parachain side is called `dmpqueue (ExecutedDownward)`, and the parameter that identifies the XCM message is either called `message_hash` or `message_id`.
+   - The [event](https://hydradx.subscan.io/extrinsic/4597864-2?event=4597864-8) to look for in the Parachain side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
+   - The corresponding [event](https://assethub-polkadot.subscan.io/extrinsic/5779603-0?event=5779603-4) in the System Parachain side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in the System parachain.
+   - In the System Parachain we will also see the event `foreignAssets(Issued)` which indicates that the foreign assets transferred have been minted on the System Chain.
 
-3. For an XCM transfer from a System Parachain to a Parachain _([example](https://polkadot.subscan.io/xcm_message/polkadot-7a1c6fd86e290680f8ee48cee8a64df8e75f7040))_:
-
-   - The [event](https://assethub-polkadot.subscan.io/extrinsic/4677169-2?event=4677169-4) to look for in the System Parachain side is called `xcmpqueue (XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
-   - The corresponding [event](https://astar.subscan.io/extrinsic/4540721-1?event=4540721-7) in the Parachain side is the `xcmpqueue (Success)` and the `message_hash` found in that event should have the same value as the one in the System parachain.
-
-More examples with different directions and their corresponding events, can be found in this
-["How to trace XCM Transfers"](https://hackmd.io/@LwMsxe3-SFmNXxugAXOKgg/SJrREymlp) page.
 
 ##### Monitoring of Failed XCM Transfers
 
 In case that an XCM transfer fails to complete successfully, then we will notice some different parameters in the events emitted or different events. Below are some examples:
 
-1. From a Relay chain to a System Parachain _([example](https://polkadot.subscan.io/xcm_message/polkadot-c8d7186edb43a592d65b3b5a87c4ecaac38c5aa2))_:
+1. From a Parachain to a System Parachain _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-d5bb5c46fcb2f18718cf2775cf29b5ad12c2edae))_:
 
-   - We will see the [event](https://assethub-polkadot.subscan.io/extrinsic/4671081-0?event=4671081-1) **`dmpqueue (ExecutedDownward)`** in the System Parachain side with the following parameters:
-     - **`outcome`** with value **`Incomplete`** and with the type of error which in this example is
-       [UntrustedReserveLocation](https://github.com/paritytech/polkadot-sdk/blob/c54ea64af43b522d23bfabb8d917a490c0f23217/polkadot/xcm/src/v2/traits.rs#L43).
-     - **`message_id`** which shows the hash of the XCM Transfer.
-
-2. From a Parachain to another Parachain _([example](https://polkadot.subscan.io/xcm_message/polkadot-3e74e95204faa6ecf3c81f5129b85f498b89cff2))_:
-
-   - We will see the [event](https://interlay.subscan.io/extrinsic/3627057-1?event=3627057-8) **`xcmpqueue (Fail)`** in the destination Parachain with the following parameters:
-     - **`error`** which in this example is [TooExpensive](https://github.com/paritytech/polkadot-sdk/blob/c54ea64af43b522d23bfabb8d917a490c0f23217/polkadot/xcm/src/v2/traits.rs#L98).
+   - We will see the [event](https://assethub-polkadot.subscan.io/extrinsic/5754141-0?event=5754141-4) **`xcmpqueue(Fail)`** in the System Parachain with the following parameters:
+     - **`error`** which in this example is [NotHoldingFees](https://github.com/paritytech/polkadot-sdk/blob/cdc8d197e6d487ef54f7e16767b5c1ab041c8b10/polkadot/xcm/src/v3/traits.rs#L97).
      - **`message_hash`** which identifies the XCM Transfer.
-   - **Note** : there might be another [event](https://interlay.subscan.io/extrinsic/3627057-1?event=3627057-7) called **`polkadotxcm (AssetsTrapped)`** which indicates that some assets have been trapped (and hence can be claimed).
+   - **Note** : there might be another [event](https://assethub-polkadot.subscan.io/extrinsic/5754141-0?event=5754141-3) called **`polkadotxcm(AssetsTrapped)`** which indicates that some assets have been trapped (and hence can be claimed).
 
 A great resource to learn more about Error Management in XCM is the Polkadot blog post from Dr. Gavin Wood, [XCM Part III: Execution and Error Management](https://www.polkadot.network/blog/xcm-part-three-execution-and-error-management).
 
@@ -231,7 +213,7 @@ Using the generic endpoints for the pallets, ssidecar can also retrieve values s
 
 We also have the option to use have the sidecar submit transactions to the node it's connected to. For this we would have to first build the tx, sign it, and submit it as a hex string.
 
-For example, for submitting a `foreignAssets.mint` tx, we would have to do something in the likes of:
+For example, for submitting a `foreignAssets.transfer` tx, we would have to do something in the likes of:
 
 ```ts
 const wsProvider = new WsProvider(RPC_ENDPOINT);
