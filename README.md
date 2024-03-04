@@ -1,3 +1,6 @@
+# Polkadot Asset Hub
+
+## Overview
 
 The Polkadot Relay Chain does not natively support assets beyond DOT. This functionality exists in a parachain called Asset Hub.
 
@@ -12,11 +15,18 @@ Beyond merely supporting assets, integrating an Asset Hub into your systems has 
 The Asset Hub will use DOT as its native currency. Users can transfer DOT from the Relay Chain into the Asset Hub and use it natively, and to the Relay Chain Asset Hub back to the Relay Chain for staking, governance, or any other activity.
 
 Using the Asset Hub for DOT balance transfers will be much more efficient than the Relay Chain and is highly recommended.
-## Foreign Assets Basics
 
-Foreign Assets are stored as a map from an ID () to information about the asset, including a management team, total supply, total number of accounts, its sufficiency for account existence, and more. Additionally, the asset owner can register metadata like the name, symbol, and number of decimals for representation.
+## Foreign Assets in Polkadot Asset Hub
 
-Assets do have a minimum balance (set by the creator), and if an account drops below that balance, the dust is lost.
+Foreign assets are those assets in Asset Hub whose native blockchain is not Asset Hub. These are mainly native tokens from other parachains or bridged tokens from other consensus systems (such as Ethereum). Once a foreign asset has been registered in Asset Hub (by its root origin), users are enabled to send this token from its native blockchain to Asset Hub and operate with it as if it was any other asset.
+
+Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of the previously mentioned `assets` pallet. Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call: 
+
+``` ts
+foreignAssets.transferKeepAlive(id, target, amount)
+```
+
+The main difference to take into account for foreign assets is their identifier. Unlike using integers as identifiers in the `assets` pallet, assets stored in the `foreign-assets` pallet are identified by [their XCM multilocation](https://wiki.polkadot.network/docs/learn/xcm/fundamentals/multilocation-summary). Taking the example below, the id input parameter of the call above will be a multilocation type as `{parents: 1, interior: {X1: {Parachain: 2,123}}}`.
 
 ### Foreign Asset Operations
 
@@ -24,40 +34,8 @@ The main functions you will probably interact with are `foreignAssets.transfer_a
 
 The `foreign-assets` also provides an `approve_transfer`, `cancel_approval`, and `transfer_approved` interface for non-custodial operations.
 
-Asset transfers will result in an `foreignAssets.transferred` event. The same instructions for
-[monitoring events and **not** transactions](https://wiki.polkadot.network/docs/build-protocol-info#events) applies to asset transfers.
-
 Note that you can use the same addresses (except [pure proxies](https://wiki.polkadot.network/docs/learn-proxies-pure#anonymous-proxy-pure-proxy)!) on the Asset Hub that
 you use on the Relay Chain. The SS58 encodings are the same; only the chain information (genesis hash, etc.) will change on transaction construction.
-
-## Integration
-
-The Asset Hub will come with the same tooling suite that Parity Technologies provides for the Relay Chain, namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
-
-#### Asset Transfer API
-
-`Asset-transfer-api` is a library focused on simplifying the construction of asset transfers for Substrate-based chains that involve system parachains like Asset Hub, and it can be used for foreign assets as well. It exposes a reduced set of methods that facilitate users to send transfers to other (para) chains or locally. You can refer to [this table](https://github.com/paritytech/asset-transfer-api/tree/main#current-cross-chain-support) for the current cross-chain support and [here](https://paritytech.github.io/asset-transfer-api/) for
-the complete documentation, including installation guide and usage examples.
-
-#### Sidecar
-
-`API Sidecar` is a REST service for Relay Chain and parachain nodes. It comes with endpoints to query information about assets and asset balances on the Asset Hub.
-- Asset lookups always use the `AssetId` to refer to an asset class. On-chain metadata is subject to change and thus unsuitable as a canonical index.
-- Please refer to [docs](https://paritytech.github.io/substrate-api-sidecar/dist/) for full usage information. Details on options like how to make a historical query are not included here.
-
-This is the available public instance of sidecar for the Polkadot Asset Hub:
-
-- [Sidecar connected to Polkadot Asset Hub](https://polkadot-asset-hub-public-sidecar.parity-chains.parity.io)
-
-The purpose of these instances is to allow anyone to check and get a quick overview of the info that the asset-related endpoints provide.
-
-**NOTE: This instance should only be used for ad-hoc checks or tests and not for production, heavy testing or any other critical purpose.**
-
-#### Tx Wrapper Polkadot
-
-TxWrapper Polkadot is a library designed to facilitate transaction construction and signing in
-offline environments. It comes with asset-specific functions to use on the Asset Hub. When
-constructing parachain transactions, you can use `txwrapper-polkadot` exactly as on the Relay Chain, but construct transactions with the appropriate parachain metadata like  genesis hash, spec version, and type registry.
 
 #### XCM Transfer Monitoring
 
@@ -134,13 +112,6 @@ There are several node types, each with it's use case, but generally the most re
 
 An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
 
-#### Hardware requirements
-
-Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
-
-#### Maintenance
-
-It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
 #### NOS
 
 NoS stands for Node + (API) Sidecar and consists of a simple script to launch a full node of [Asset Hub](https://wiki.polkadot.network/docs/learn-system-chains#asset-hub) together with an instance of [Sidecar](https://github.com/paritytech/substrate-api-sidecar) on a machine (using Docker).
@@ -151,23 +122,17 @@ To start using NoS you can follow this [guide](https://github.com/paritytech/nos
 
 NoS downloads and maintains archive nodes for at least one Relay Chain and one parachain, in this case Polkadot Relay Chain and the Polkadot Asset Hub respectively, so this will affect the amount of storage needed. At time of writing, the database sizes are 1.7 TiB for the Polkadot Relay Chain node and 133 GiB for the Polkadot Asset Hub node, both running with `pruning=archive`. Sidecar is stateless, so the amount of storage it requires is marginal. You can check the current db size for each type of node [here](https://stakeworld.io/docs/dbsize).
 
-## Foreign Assets in Polkadot Asset Hub
+#### Hardware requirements
 
-Foreign assets are those assets in Asset Hub whose native blockchain is not Asset Hub. These are mainly native tokens from other parachains or bridged tokens from other consensus systems (such as Ethereum). Once a foreign asset has been registered in Asset Hub (by its root origin), users are enabled to send this token from its native blockchain to Asset Hub and operate with it as if it was any other asset.
+Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
 
-Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of the previously mentioned `assets` pallet. Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call: 
+#### Maintenance
 
-``` ts
-foreignAssets.transferKeepAlive(id, target, amount)
-```
-
-The main difference to take into account for foreign assets is their identifier. Unlike using integers as identifiers in the `assets` pallet, assets stored in the `foreign-assets` pallet are identified by [their XCM multilocation](https://wiki.polkadot.network/docs/learn/xcm/fundamentals/multilocation-summary). Taking the example below, the id input parameter of the call above will be a multilocation type as `{parents: 1, interior: {X1: {Parachain: 2,123}}}`.
-
-#### Monitoring XCM Transfers of Foreign Assets
-
-For a guide and examples on how to monitor cross-chain foreign assets transfers, you can refer to [the guide posted on the Polkadot Wiki](https://wiki.polkadot.network/docs/build-integrate-assets#xcm-transfer-monitoring). The relevant events to track are the same, since they depend on the `polkadot-xcm` pallet. The only difference is that instead of the `balances.deposit`, the event we have to query for is `foreignAssets.transferred`.
+It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
 
 #### Relevant tooling
+
+The Asset Hub will come with the same tooling suite that Parity Technologies provides for the Relay Chain, namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
 
 ##### Substrate API Sidecar
 
@@ -271,6 +236,12 @@ You can find more information about Sidecar in its [documentation](https://parit
 Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub. 
 It exposes a reduced set of methods which facilitates users to send transfers to other (para) chains or locally.
 It covers the pallet `assets` and its instances `pool-assets` and `foreign-assets`, as well as local transactions.
+
+#### Tx Wrapper Polkadot
+
+TxWrapper Polkadot is a library designed to facilitate transaction construction and signing in
+offline environments. It comes with asset-specific functions to use on the Asset Hub. When
+constructing parachain transactions, you can use `txwrapper-polkadot` exactly as on the Relay Chain, but construct transactions with the appropriate parachain metadata like genesis hash, spec version, and type registry.
 
 ### Examples
 
