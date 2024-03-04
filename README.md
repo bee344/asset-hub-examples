@@ -14,7 +14,51 @@ Beyond merely supporting assets, integrating an Asset Hub into your systems has 
 
 The Asset Hub will use DOT as its native currency. Users can transfer DOT from the Relay Chain into the Asset Hub and use it natively, and to the Relay Chain Asset Hub back to the Relay Chain for staking, governance, or any other activity.
 
-Using the Asset Hub for DOT balance transfers will be much more efficient than the Relay Chain and is highly recommended.
+### Running a Polkadot Asset Hub node
+
+Using the Asset Hub will require running a parachain node to sync the chain. This is very similar to running a Polkadot node, with the addition of some extra flags. You can download the latest release of the [`polkadot-parachain` binary](https://github.com/paritytech/polkadot-sdk/releases/latest/) or build it from [source](https://github.com/paritytech/polkadot-sdk/) with the following commands:
+```bash
+$ cargo build --release --locked --bin polkadot-parachain
+```
+
+Another alternative is using Docker, this is more advanced, so it's best left up to those already familiar with docker or who have completed the other set-up instructions:
+```bash
+$ docker run -p 9944:9944 -p 9615:9615 parity/polkadot:latest \
+\ --chain asset-hub-westend
+\ --rpc-external
+\ --prometheus-external
+```
+And then run the node with:
+```bash
+$ ./target/release/polkadot-parachain --chain asset-hub-westend
+```
+
+#### Types of Nodes
+
+There are several node types, each with it's use case, but generally the most relevant are either an `archive` node or a `full` node:
+
+- An **archive node** (`--pruning archive`) keeps all the past blocks and their states. An archive node makes it convenient to query the past state of the chain at any point in time.
+- A **full node** prunes historical states: all finalized blocks' states older than a configurable number except the genesis block's state. This is 256 blocks from the last finalized one by default. A pruned node this way requires much less space than an archive node.
+
+An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
+
+#### Hardware requirements
+
+Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
+
+#### NOS
+
+NoS stands for Node + (API) Sidecar and consists of a simple script to launch a full node of [Asset Hub](https://wiki.polkadot.network/docs/learn-system-chains#asset-hub) together with an instance of [Sidecar](https://github.com/paritytech/substrate-api-sidecar) on a machine (using Docker).
+
+With NoS, you are able to spin up the nodes you want and quickly be able to communicate with them through an instance of Sidecar. All that is required is a configuration file that contains the desired settings for the network. When you provide this config file to NoS, it will do some heavy lifting for you, which includes updating versions.
+
+To start using NoS you can follow this [guide](https://github.com/paritytech/nos?tab=readme-ov-file#using-nos). For generating an instance of Polkadot Asset Hub you can follow this [example `.env` file](https://github.com/paritytech/nos/blob/main/.env.statemint.example), just updating `POLKADOT_VERSION` and `POLKADOT_PARACHAIN_VERSION`.
+
+NoS downloads and maintains archive nodes for at least one Relay Chain and one parachain, in this case Polkadot Relay Chain and the Polkadot Asset Hub respectively, so this will affect the amount of storage needed. At time of writing, the database sizes are 1.7 TiB for the Polkadot Relay Chain node and 133 GiB for the Polkadot Asset Hub node, both running with `pruning=archive`. Sidecar is stateless, so the amount of storage it requires is marginal. You can check the current db size for each type of node [here](https://stakeworld.io/docs/dbsize).
+
+#### Maintenance
+
+It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
 
 ## Foreign Assets in Polkadot Asset Hub
 
@@ -84,52 +128,6 @@ In case that an XCM transfer fails to complete successfully, then we will notice
 
 A great resource to learn more about Error Management in XCM is the Polkadot blog post from Dr. Gavin Wood, [XCM Part III: Execution and Error Management](https://www.polkadot.network/blog/xcm-part-three-execution-and-error-management).
 
-### Running a Polkadot Asset Hub node
-
-Using the Asset Hub will require running a parachain node to sync the chain. This is very similar to running a Polkadot node, with the addition of some extra flags. You can download the latest release of the [`polkadot-parachain` binary](https://github.com/paritytech/polkadot-sdk/releases/latest/) or build it from [source](https://github.com/paritytech/polkadot-sdk/) with the following commands:
-```bash
-$ cargo build --release --locked --bin polkadot-parachain
-```
-
-Another alternative is using Docker, this is more advanced, so it's best left up to those already familiar with docker or who have completed the other set-up instructions:
-```bash
-$ docker run -p 9944:9944 -p 9615:9615 parity/polkadot:latest \
-\ --chain asset-hub-westend
-\ --rpc-external
-\ --prometheus-external
-```
-And then run the node with:
-```bash
-$ ./target/release/polkadot-parachain --chain asset-hub-westend
-```
-
-#### Types of Nodes
-
-There are several node types, each with it's use case, but generally the most relevant are either an `archive` node or a `full` node:
-
-- An **archive node** (`--pruning archive`) keeps all the past blocks and their states. An archive node makes it convenient to query the past state of the chain at any point in time.
-- A **full node** prunes historical states: all finalized blocks' states older than a configurable number except the genesis block's state. This is 256 blocks from the last finalized one by default. A pruned node this way requires much less space than an archive node.
-
-An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
-
-#### NOS
-
-NoS stands for Node + (API) Sidecar and consists of a simple script to launch a full node of [Asset Hub](https://wiki.polkadot.network/docs/learn-system-chains#asset-hub) together with an instance of [Sidecar](https://github.com/paritytech/substrate-api-sidecar) on a machine (using Docker).
-
-With NoS, you are able to spin up the nodes you want and quickly be able to communicate with them through an instance of Sidecar. All that is required is a configuration file that contains the desired settings for the network. When you provide this config file to NoS, it will do some heavy lifting for you, which includes updating versions.
-
-To start using NoS you can follow this [guide](https://github.com/paritytech/nos?tab=readme-ov-file#using-nos). For generating an instance of Polkadot Asset Hub you can follow this [example `.env` file](https://github.com/paritytech/nos/blob/main/.env.statemint.example), just updating `POLKADOT_VERSION` and `POLKADOT_PARACHAIN_VERSION`.
-
-NoS downloads and maintains archive nodes for at least one Relay Chain and one parachain, in this case Polkadot Relay Chain and the Polkadot Asset Hub respectively, so this will affect the amount of storage needed. At time of writing, the database sizes are 1.7 TiB for the Polkadot Relay Chain node and 133 GiB for the Polkadot Asset Hub node, both running with `pruning=archive`. Sidecar is stateless, so the amount of storage it requires is marginal. You can check the current db size for each type of node [here](https://stakeworld.io/docs/dbsize).
-
-#### Hardware requirements
-
-Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
-
-#### Maintenance
-
-It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
-
 #### Relevant tooling
 
 The Asset Hub will come with the same tooling suite that Parity Technologies provides for the Relay Chain, namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
@@ -174,7 +172,7 @@ For the case of `foreign-assets`, the sidecar can fetch information associated w
 }
 ```
 
-Using the generic endpoints for the pallets, ssidecar can also retrieve values specific to the configuration of the pallet, such as `constants`, `dispatchables`, `errors`, `events` and `storage`.
+Using the generic endpoints for the pallets, sidecar can also retrieve values specific to the configuration of the pallet, such as `constants`, `dispatchables`, `errors`, `events` and `storage`.
 
 We also have the option to use have the sidecar submit transactions to the node it's connected to. For this we would have to first build the tx, sign it, and submit it as a hex string.
 
