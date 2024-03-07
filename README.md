@@ -24,13 +24,13 @@ $ cargo build --release --locked --bin polkadot-parachain
 Another alternative is using Docker, this is more advanced, so it's best left up to those already familiar with docker or who have completed the other set-up instructions:
 ```bash
 $ docker run -p 9944:9944 -p 9615:9615 parity/polkadot:latest \
-\ --chain asset-hub-westend
+\ --chain asset-hub-polkadot
 \ --rpc-external
 \ --prometheus-external
 ```
 And then run the node with:
 ```bash
-$ ./target/release/polkadot-parachain --chain asset-hub-westend
+$ ./target/release/polkadot-parachain --chain asset-hub-polkadot
 ```
 
 #### Types of Nodes
@@ -42,23 +42,47 @@ There are several node types, each with it's use case, but generally the most re
 
 An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
 
+You can run the Polkadot Relay Chain with specifying `--pruning` other than `archive`, but the Polkadot Asset Hub should be run as an `archive` node. 
+
 #### Hardware requirements
 
-Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
+Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node. 
 
 #### NOS
 
-NoS stands for Node + (API) Sidecar and consists of a simple script to launch a full node of [Asset Hub](https://wiki.polkadot.network/docs/learn-system-chains#asset-hub) together with an instance of [Sidecar](https://github.com/paritytech/substrate-api-sidecar) on a machine (using Docker).
+NoS stands for Node + (API) Sidecar and consists of a simple script to launch a full node of Asset Hub together with an instance of [Sidecar](https://github.com/paritytech/substrate-api-sidecar) on a machine (using Docker).
 
 With NoS, you are able to spin up the nodes you want and quickly be able to communicate with them through an instance of Sidecar. All that is required is a configuration file that contains the desired settings for the network. When you provide this config file to NoS, it will do some heavy lifting for you, which includes updating versions.
 
 To start using NoS you can follow this [guide](https://github.com/paritytech/nos?tab=readme-ov-file#using-nos). For generating an instance of Polkadot Asset Hub you can follow this [example `.env` file](https://github.com/paritytech/nos/blob/main/.env.statemint.example), just updating `POLKADOT_VERSION` and `POLKADOT_PARACHAIN_VERSION`.
 
-NoS downloads and maintains archive nodes for at least one Relay Chain and one parachain, in this case Polkadot Relay Chain and the Polkadot Asset Hub respectively, so this will affect the amount of storage needed. At time of writing, the database sizes are 1.7 TiB for the Polkadot Relay Chain node and 133 GiB for the Polkadot Asset Hub node, both running with `pruning=archive`. Sidecar is stateless, so the amount of storage it requires is marginal. You can check the current db size for each type of node [here](https://stakeworld.io/docs/dbsize).
+NoS downloads and maintains archive nodes for at least one Relay Chain and one parachain, in this case Polkadot Relay Chain and the Polkadot Asset Hub respectively, so this will affect the amount of storage needed. At time of writing, the database sizes are 1.7 TiB for the Polkadot Relay Chain node and 133 GiB for the Polkadot Asset Hub node, both running with `pruning=archive`. Sidecar is stateless, so the amount of storage it requires is marginal. You can check the current db size for each type of node [here](https://stakeworld.io/docs/dbsize). You can reduce the storage requirement for the Polkadot Relay Chain by adding the line `RELAYCHAIN_PRUNING=1000` in the `.env` file, in order to have the Relay Chain node keep only the last `1000` blocks.
 
-#### Maintenance
+### Maintenance
 
-It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
+It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. 
+
+#### Runtime Upgrades
+
+You can monitor the Relay Chain for upcoming upgrades. The client release notes include the hashes of any
+proposals related to any on-chain upgrades for easy matching. Monitor the chain for:
+
+1. `democracy(Started)` events and log `index` and `blockNumber`. This event indicates that a
+   referendum has started (although it does not mean it is a runtime upgrade). Get the referendum
+   info\*; it should have a status of `Ongoing`. Find the ending block number (`end`) and the
+   enactment `delay` (delay). If the referendum passes, it will execute on block number
+   `end + delay`.
+2. `democracy(Passed)`, `democracy(NotPassed)`, or, `democracy(Cancelled)` events citing the index.
+   If `Passed`, you need to look at the `scheduler(Scheduled)` event in the same block for the
+   enactment block.
+3. `democracy(PreimageNoted)` events with the same hash as the `ReferendumInfoOf(index)` item. This
+   may be up to the last block before execution, but it will not work if this is missing.
+4. `democracy(Executed)` events for actual execution. In the case of a runtime upgrade, there will
+   also be a `system(CodeUpdated)` event.
+
+_\* E.g. via `pallets/democracy/storage/ReferendumInfoOf?key1=index&at=blockNumber` on Sidecar._
+
+Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
 
 ## Foreign Assets in Polkadot Asset Hub
 
