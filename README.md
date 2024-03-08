@@ -7,6 +7,7 @@ The Polkadot Relay Chain does not natively support assets beyond DOT. This funct
 Asset Hub provides a first-class interface for creating, managing, and using fungible and non-fungible assets. The fungible interface is similar to Ethereum's ERC-20 standard. However, the data structures and stateful operations are encoded directly into the chain's runtime, making operations fast and fee-efficient.
 
 Beyond merely supporting assets, integrating an Asset Hub into your systems has several benefits for infrastructure providers and users:
+
 - Support for on-chain assets.
 - Significantly lower transaction fees (about 1/10) than the Polkadot Relay Chain.
 - Significantly lower deposits (0.01 DOT) than the Polkadot Relay Chain.
@@ -17,20 +18,24 @@ Asset Hub will use DOT as its native currency. Users can transfer DOT from the R
 ### Running a Polkadot Asset Hub node
 
 Using Asset Hub will require running a parachain node to sync the chain. This is very similar to running a Polkadot node, with the addition of some extra flags. You can download the latest release of the [`polkadot-parachain` binary](https://github.com/paritytech/polkadot-sdk/releases/latest/) or build it from [source](https://github.com/paritytech/polkadot-sdk/) with the following commands:
+
 ```bash
-$ cargo build --release --locked --bin polkadot-parachain
+cargo build --release --locked --bin polkadot-parachain
 ```
 
 Another alternative is using Docker, this is more advanced, so it's best left up to those already familiar with docker or who have completed the other set-up instructions:
+
 ```bash
 $ docker run -p 9944:9944 -p 9615:9615 parity/polkadot:latest \
 \ --chain asset-hub-polkadot
 \ --rpc-external
 \ --prometheus-external
 ```
+
 And then run the node with:
+
 ```bash
-$ ./target/release/polkadot-parachain --chain asset-hub-polkadot
+./target/release/polkadot-parachain --chain asset-hub-polkadot
 ```
 
 #### Types of Nodes
@@ -42,11 +47,11 @@ There are several node types, each with it's use case, but generally the most re
 
 An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
 
-You can run the Polkadot Relay Chain with specifying `--pruning` other than `archive`, but the Polkadot Asset Hub should be run as an `archive` node. 
+You can run the Polkadot Relay Chain with specifying `--pruning` other than `archive`, but the Polkadot Asset Hub should be run as an `archive` node.
 
 #### Hardware requirements
 
-Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node. 
+Currently there are no hardware requirements specific for running a node, since they do not perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
 
 #### NOS
 
@@ -60,47 +65,68 @@ NoS downloads and maintains archive nodes for at least one Relay Chain and one p
 
 ### Maintenance
 
-It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. 
+It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date.
 
 #### Runtime Upgrades
 
-You can monitor the Relay Chain for upcoming upgrades. The client release notes include the hashes of any
-proposals related to any on-chain upgrades for easy matching. Monitor the chain for:
+[Runtime upgrades](https://wiki.polkadot.network/docs/learn-runtime-upgrades) allow the Polkadot Asset Hub to change the logic of the chain without the need for a hard fork. You can monitor the Relay Chain for upcoming upgrades. We recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of changes in the runtime logic of Asset Hub. These runtime upgrades are voted on and executed via [OpenGov](https://wiki.polkadot.network/docs/learn-polkadot-opengov). You should monitor the Relay chain as follows to know when the next runtime upgrade will be enacted:
 
-1. `democracy(Started)` events and log `index` and `blockNumber`. This event indicates that a
-   referendum has started (although it does not mean it is a runtime upgrade). Get the referendum
-   info\*; it should have a status of `Ongoing`. Find the ending block number (`end`) and the
-   enactment `delay` (delay). If the referendum passes, it will execute on block number
-   `end + delay`.
-2. `democracy(Passed)`, `democracy(NotPassed)`, or, `democracy(Cancelled)` events citing the index.
-   If `Passed`, you need to look at the `scheduler(Scheduled)` event in the same block for the
-   enactment block.
-3. `democracy(PreimageNoted)` events with the same hash as the `ReferendumInfoOf(index)` item. This
-   may be up to the last block before execution, but it will not work if this is missing.
-4. `democracy(Executed)` events for actual execution. In the case of a runtime upgrade, there will
-   also be a `system(CodeUpdated)` event.
-
-_\* E.g. via `pallets/democracy/storage/ReferendumInfoOf?key1=index&at=blockNumber` on Sidecar._
-
-Lastly, we recommend keeping track of the Polkadot Fellowship's [runtime upgrades](https://github.com/polkadot-fellows/runtimes/releases/latest) to be aware of critical logic changes. These runtime upgrades are voted on and executed via OpenGov, and the proposals with their enactment dates and other details can be found [here](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1).
+1. Check each block for `referenda (Submitted)` events and check if `track` is `1`, which means it's `whitelistedCaller` - this is the only track that can enact runtime upgrdes - and log its `index` and `proposal`, this will help you keep track of the proposal's evolution. With the index you can lookup the details of the proposal in [Polkassembly.io](https://polkadot.polkassembly.io/whitelisted-caller?trackStatus=all&page=1) to see if it corresponds with a runtime upgrade.
+2. In the same block, look for the extrinsic `referenda.submit`, which has the `enactment_moment` for the proposal in blocks.
+3. Check also for `referenda (DecisionDepositPlaced)` events where `index` matches the one previously found. This means that the required deposit has been placed.
+4. `referenda (DecisionStarted)` indicates that the decision period has started for the referenda of that `index`.
+5. `referenda (ConfirmStarted)` indicates that `index`'s referenda has entered the confirmation period.
+   1. `referenda (Confirmed)` indicates that `index`'s referenda has been confirmed and will enter the enactment period. With this and `enactment_moment`, you can estimate when the proposal will be enacted.
+   2. `referenda (Rejected)` indicates that `index`'s referenda has been rejected and will not be enacted.
+6. Once the enactment period is over, there will be a `system(CodeUpdated)` event confirming the execution of the runtime upgrade.
 
 ## Foreign Assets in Polkadot Asset Hub
 
 Assets, both native and foreign, are stored as a map from an ID to information about the asset, including a management team, total supply, total number of accounts, its sufficiency for account existence, and more. Additionally, the asset owner can register metadata like the name, symbol, and number of decimals for representation.
 
-Some assets, as determined by on-chain governance, are regarded as “sufficient”. Sufficiency means that the asset balance is enough to create the account on-chain, with no need for the DOT existential deposit. Likewise, you cannot send a non-sufficient asset to an account that does not exist. Sufficient assets can be used to pay transaction fees (i.e. there is no need to hold DOT on the account). Assets do have a minimum balance, and if an account drops below that balance, the dust is lost.
+Some assets, as determined by on-chain governance, are regarded as “sufficient”. Sufficiency means that the asset balance is enough to create the account on-chain, with no need for the DOT existential deposit. Likewise, you cannot send a non-sufficient asset to an account that does not exist. Assets do have a minimum balance, and if an account drops below that balance, the dust is lost.
 
 For an more details on general asset management in Asset Hub, refer to the [assets documentation](https://wiki.polkadot.network/docs/build-integrate-assets#assets-basics) of the Polkadot Wiki.
 
 Foreign assets are those assets in Asset Hub whose native blockchain is not Asset Hub. These are mainly native tokens from other parachains or bridged tokens from other consensus systems (such as Ethereum). Once a foreign asset has been registered in Asset Hub (by its root origin), users are enabled to send this token from its native blockchain to Asset Hub and operate with it as if it was any other asset.
 
-Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of [the `assets` pallet](https://marketplace.substrate.io/pallets/pallet-assets/). Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call: 
+Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of [the `assets` pallet](https://marketplace.substrate.io/pallets/pallet-assets/). Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call:
 
 ``` ts
 foreignAssets.transferKeepAlive(id, target, amount)
 ```
 
 The main difference to take into account for foreign assets is their identifier. Unlike using integers as identifiers in the `assets` pallet, assets stored in the `foreign-assets` pallet are identified by [their XCM multilocation](https://wiki.polkadot.network/docs/learn/xcm/fundamentals/multilocation-summary). Taking the example below, the id input parameter of the call above will be a multilocation type as `{parents: 1, interior: {X1: {Parachain: 2,123}}}`.
+
+``` ts
+    [
+      {
+        parents: 1
+        interior: {
+          X1: {
+            Parachain: 2,123
+          }
+        }
+      }
+    ]
+    {
+      owner: FBeL7DhzrCPmjxvXCkC9Kzu59XFLvA5rGtQnr8FvFLubfBh
+      issuer: FBeL7DhzrCPmjxvXCkC9Kzu59XFLvA5rGtQnr8FvFLubfBh
+      admin: FBeL7DhzrCPmjxvXCkC9Kzu59XFLvA5rGtQnr8FvFLubfBh
+      freezer: FBeL7DhzrCPmjxvXCkC9Kzu59XFLvA5rGtQnr8FvFLubfBh
+      supply: 0
+      deposit: 100,000,000,000
+      minBalance: 1,000,000,000
+      isSufficient: false
+      accounts: 1
+      sufficients: 0
+      approvals: 0
+      status: Live
+    }
+  ]
+```
+
+Example of a decoded storage entry of a foreign asset with Polkadot-JS. The key of the storage entry is the XCM Location of the asset, in this case, the parachain GM in the Kusama ecosystem (para ID 2123).
 
 ### Foreign Asset Operations
 
@@ -115,9 +141,9 @@ you use on the Relay Chain. The SS58 encodings are the same; only the chain info
 
 ##### Monitoring of XCM deposits
 
-Thanks to XCM and a growing number of parachains, asssets (and foreign assets) can exist across several blockchains, which means the providers need to monitor cross-chain transfers on top of local transfers and corresponding `foreignAssets.transfer_*` events.
+Assets can exist across several blockchains, which means the service providers need to monitor cross-chain transfers on top of local transfers and corresponding `foreignAssets.transfer_*` events.
 
-Currently, foreign assets can be sent and received in Asset Hub either with a [Reserve Backed Transfer or Teleporting](https://wiki.polkadot.network/docs/learn-xcm-pallet#transfer-reserve-vs-teleport) from other parachains. In both cases, the event emitted when processing the transfer is the `foreignAssets.issued` event. Hence, providers should listen to these events, pointing to an address in their system. For this, the service provider must query every new block created, loop through the events array, filter for any `foreignAssets.issued` event, and apply the appropriate business logic.
+Currently, foreign assets can be sent and received in Asset Hub either with a [Reserve Backed Transfer or Teleporting](https://wiki.polkadot.network/docs/learn-xcm-pallet#transfer-reserve-vs-teleport) from other parachains. In both cases, the event emitted when processing the transfer is the `foreignAssets.issued` event. Hence, you should listen to these events, pointing to an address in their system. For this, you should query every new block created, loop through the events array, filter for any `foreignAssets.issued` event, and apply the appropriate business logic.
 
 ##### Tracking back XCM information
 
@@ -132,35 +158,34 @@ However, in some cases, it may be interesting to identify the cross-chain messag
 
 The two previous sections outline the process of monitoring XCM deposits to specific account(s) and then tracing back the origin of these deposits. However, the process of tracking an XCM transfer (hence the events to look for) may vary based on the direction of the XCM message. Here are some examples to showcase the slight differences:
 
-1. For an XCM transfer from Asset Hub to a Parachain _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-ac190c9170b17a9dacb421d3d86c14d67892abe2))_:
+1. For an XCM transfer of a foreing asset from Asset Hub to the native Parachain:
 
-   - The [event](https://assethub-polkadot.subscan.io/extrinsic/5768961-2?event=5768961-7) to look for in Asset Hub side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
-   - The corresponding [event](https://hydradx.subscan.io/extrinsic/4586604-1?event=4586604-7) in the Parachain side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in Asset Hub.
+   - The event to look for in Asset Hub side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
+   - The corresponding event in the Parachain side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in Asset Hub.
    - In Asset Hub we will also see the event `foreignAssets(Burned)` which indicates that the foreign assets transferred have been burnt on Asset Hub.
 
-2. For an XCM transfer from a Parachain to Asset Hub _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-eb27d2225d2ccb3b979f8fb8a5241b7a9a8ee4d4))_:
+2. For an XCM transfer of a foreing asset from the native Parachain to Asset Hub:
 
-   - The [event](https://hydradx.subscan.io/extrinsic/4597864-2?event=4597864-8) to look for in the Parachain side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
-   - The corresponding [event](https://assethub-polkadot.subscan.io/extrinsic/5779603-0?event=5779603-4) in Asset Hub side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in Asset Hub.
+   - The event to look for in the Parachain side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
+   - The corresponding even in Asset Hub side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in Asset Hub.
    - In Asset Hub we will also see the event `foreignAssets(Issued)` which indicates that the foreign assets transferred have been minted on Asset Hub.
-
 
 ##### Monitoring of Failed XCM Transfers
 
 In case that an XCM transfer fails to complete successfully, then we will notice some different parameters in the events emitted or different events. Below are some examples:
 
-1. From a Parachain to Asset Hub _([example](https://assethub-polkadot.subscan.io/xcm_message/polkadot-d5bb5c46fcb2f18718cf2775cf29b5ad12c2edae))_:
+1. From a Parachain to Asset Hub:
 
-   - We will see the [event](https://assethub-polkadot.subscan.io/extrinsic/5754141-0?event=5754141-4) **`xcmpqueue(Fail)`** in Asset Hub with the following parameters:
-     - **`error`** which in this example is [NotHoldingFees](https://github.com/paritytech/polkadot-sdk/blob/cdc8d197e6d487ef54f7e16767b5c1ab041c8b10/polkadot/xcm/src/v3/traits.rs#L97).
-     - **`message_hash`** which identifies the XCM Transfer.
-   - **Note** : there might be another [event](https://assethub-polkadot.subscan.io/extrinsic/5754141-0?event=5754141-3) called **`polkadotxcm(AssetsTrapped)`** which indicates that some assets have been trapped (and hence can be claimed).
+   - We will see the event `xcmpqueue(Fail)` in Asset Hub with the following parameters:
+     - `error` which may be one of these in [this list](https://github.com/paritytech/polkadot-sdk/blob/cdc8d197e6d487ef54f7e16767b5c1ab041c8b10/polkadot/xcm/src/v3/traits.rs#L34).
+     - `message_hash` which identifies the XCM Transfer.
+   - **Note** : there might be another event called `polkadotxcm(AssetsTrapped)` which indicates that some assets have been trapped (and hence can be claimed by the sender).
 
 A great resource to learn more about Error Management in XCM is the Polkadot blog post from Dr. Gavin Wood, [XCM Part III: Execution and Error Management](https://www.polkadot.network/blog/xcm-part-three-execution-and-error-management).
 
 #### Relevant tooling
 
-Asset Hub will come with the same tooling suite that Parity Technologies provides for the Relay Chain, namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
+Asset Hub will come with the same tooling suite [provided for the Relay Chain](https://wiki.polkadot.network/docs/build-integration#recommendation), namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [Polkadot-JS](https://wiki.polkadot.network/docs/learn-polkadotjs-index), [subxt](https://github.com/paritytech/subxt), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
 
 ##### Substrate API Sidecar
 
@@ -204,32 +229,28 @@ For the case of `foreign-assets`, Sidecar can fetch information associated with 
 
 Using the generic endpoints for the pallets, sidecar can also retrieve values specific to the configuration of the pallet, such as `constants`, `dispatchables`, `errors`, `events` and `storage`.
 
-We also have the option to use have Sidecar submit transactions to the node it's connected to. For this we would have to first build the tx, sign it, and submit it as a hex string. Then, if the submission was successful, we would receive a JSON with the hash of the tx:
+Sidecar can also submit transactions to the node it's connected to. For this we would have to first build the transaction, sign it, and submit it as a hex string. Then, if the submission was successful, we would receive a JSON with the hash of the transaction, `txHash`:
 
 ```json
 {
   "hash": "txHash"
 }
 ```
+
 You can find more information about Sidecar in its [documentation](https://paritytech.github.io/substrate-api-sidecar/dist/).
 
 ##### Asset Transfer API
 
-Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub. 
+Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub.
 It exposes a reduced set of methods which facilitates users to send transfers to other (para) chains or locally.
 It covers the pallet `assets` and its instances `pool-assets` and `foreign-assets`, as well as local transactions.
-
-#### Tx Wrapper Polkadot
-
-TxWrapper Polkadot is a library designed to facilitate transaction construction and signing in
-offline environments. It comes with asset-specific functions to use on Asset Hub. When
-constructing parachain transactions, you can use `txwrapper-polkadot` exactly as on the Relay Chain, but construct transactions with the appropriate parachain metadata like genesis hash, spec version, and type registry.
 
 ### Examples
 
 Examples on how to manage foreign assets can be located in their corresponding directories:
-* [Polkadot-JS](/polkadot-js-example/README.md)
-* [Subxt](/subxt-example/README.md)
-* [Asset Transfer API](/asset-transfer-api-example/README.md)
+
+- [Polkadot-JS](/polkadot-js-example/README.md)
+- [Subxt](/subxt-example/README.md)
+- [Asset Transfer API](/asset-transfer-api-example/README.md)
 
 The instructions on how to run each example are located in it's respective `README` files.
