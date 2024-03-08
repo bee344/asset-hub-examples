@@ -78,6 +78,7 @@ It's good practice to keep your node up to date with the latest version, which y
 5. `referenda (ConfirmStarted)` indicates that `index`'s referenda has entered the confirmation period.
    1. `referenda (Confirmed)` indicates that `index`'s referenda has been confirmed and will enter the enactment period. With this and `enactment_moment`, you can estimate when the proposal will be enacted.
    2. `referenda (Rejected)` indicates that `index`'s referenda has been rejected and will not be enacted.
+6. Once the enactment period is over, there will be a `system(CodeUpdated)` event confirming the execution of the runtime upgrade.
 
 ## Foreign Assets in Polkadot Asset Hub
 
