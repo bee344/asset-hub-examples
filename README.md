@@ -15,6 +15,9 @@ Beyond merely supporting assets, integrating an Asset Hub into your systems has 
 
 Asset Hub will use DOT as its native currency. Users can transfer DOT from the Relay Chain into Asset Hub and use it natively, and to the Relay Chain Asset Hub back to the Relay Chain for staking, governance, or any other activity.
 
+Note that you can use the same addresses (except [pure proxies](https://wiki.polkadot.network/docs/learn-proxies-pure#anonymous-proxy-pure-proxy)!) on Asset Hub that
+you use on the Relay Chain. The [SS58 encodings](https://wiki.polkadot.network/docs/learn-account-advanced#address-format) are the same; only the chain information (genesis hash, etc.) will change on transaction construction.
+
 ### Running a Polkadot Asset Hub node
 
 Using Asset Hub will require running a parachain node to sync the chain. This is very similar to running a Polkadot node, with the addition of some extra flags. You can download the latest release of the [`polkadot-parachain` binary](https://github.com/paritytech/polkadot-sdk/releases/latest/) or build it from [source](https://github.com/paritytech/polkadot-sdk/) with the following commands:
@@ -130,12 +133,7 @@ Example of a decoded storage entry of a foreign asset with Polkadot-JS. The key 
 
 ### Foreign Asset Operations
 
-The main functions you will probably interact with are `foreignAssets.transfer_allow_death` and `foreignAssets.transfer_keep_alive`.
-
-The `foreign-assets` also provides an `approve_transfer`, `cancel_approval`, and `transfer_approved` interface for non-custodial operations.
-
-Note that you can use the same addresses (except [pure proxies](https://wiki.polkadot.network/docs/learn-proxies-pure#anonymous-proxy-pure-proxy)!) on Asset Hub that
-you use on the Relay Chain. The SS58 encodings are the same; only the chain information (genesis hash, etc.) will change on transaction construction.
+The main functions you will probably interact with are `foreignAssets.transfer_allow_death` and `foreignAssets.transfer_keep_alive`. The `foreign-assets` also provides an `approve_transfer`, `cancel_approval`, and `transfer_approved` interface for non-custodial operations.
 
 #### XCM Transfer Monitoring
 
@@ -187,7 +185,7 @@ A great resource to learn more about Error Management in XCM is the Polkadot blo
 
 Asset Hub will come with the same tooling suite [provided for the Relay Chain](https://wiki.polkadot.network/docs/build-integration#recommendation), namely [API Sidecar](https://github.com/paritytech/substrate-api-sidecar), [Polkadot-JS](https://wiki.polkadot.network/docs/learn-polkadotjs-index), [subxt](https://github.com/paritytech/subxt), [TxWrapper Polkadot](https://github.com/paritytech/txwrapper-core/tree/main/packages/txwrapper-polkadot), and the [Asset Transfer API](https://github.com/paritytech/asset-transfer-api). If you have a technical question or issue about how to use one of the integration tools, please file a GitHub issue so a developer can help.
 
-##### Substrate API Sidecar
+##### For node interaction: Substrate API Sidecar
 
 Parity maintains an RPC client, written in TypeScript, that exposes a limited set of endpoints. It handles the metadata and codec logic so that the user is always dealing with decoded information. It also aggregates information that an infrastructure business may need for accounting and auditing, e.g. transaction fees.
 
@@ -239,18 +237,16 @@ Sidecar can also submit transactions to the node it's connected to. For this we 
 
 You can find more information about Sidecar in its [documentation](https://paritytech.github.io/substrate-api-sidecar/dist/).
 
-##### Asset Transfer API
+##### For transaction construction 
 
-Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub.
-It exposes a reduced set of methods which facilitates users to send transfers to other (para) chains or locally.
-It covers the pallet `assets` and its instances `pool-assets` and `foreign-assets`, as well as local transactions.
+Several tools are available to construct transactions for Polkadot Asset Hub. For example, subxt provides libraries in Rust with great flexibility for transaction construction, whereas Asset Transfer API is focused on offering a simplified interface to build of asset transfers. 
 
-### Examples
+- **Examples**
 
-Examples on how to manage foreign assets can be located in their corresponding directories:
+Examples on how to build transactions to manage foreign assets can be located in their following directories:
 
-- [Polkadot-JS](/polkadot-js-example/README.md)
-- [Subxt](/subxt-example/README.md)
-- [Asset Transfer API](/asset-transfer-api-example/README.md)
+- [Polkadot-JS](/polkadot-js-example/)
+- [Subxt](/subxt-example/)
+- [Asset Transfer API](/asset-transfer-api-example/)
 
 The instructions on how to run each example are located in it's respective `README` files.
