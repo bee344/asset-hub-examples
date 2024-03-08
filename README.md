@@ -7,6 +7,7 @@ The Polkadot Relay Chain does not natively support assets beyond DOT. This funct
 Asset Hub provides a first-class interface for creating, managing, and using fungible and non-fungible assets. The fungible interface is similar to Ethereum's ERC-20 standard. However, the data structures and stateful operations are encoded directly into the chain's runtime, making operations fast and fee-efficient.
 
 Beyond merely supporting assets, integrating an Asset Hub into your systems has several benefits for infrastructure providers and users:
+
 - Support for on-chain assets.
 - Significantly lower transaction fees (about 1/10) than the Polkadot Relay Chain.
 - Significantly lower deposits (0.01 DOT) than the Polkadot Relay Chain.
@@ -17,20 +18,24 @@ Asset Hub will use DOT as its native currency. Users can transfer DOT from the R
 ### Running a Polkadot Asset Hub node
 
 Using Asset Hub will require running a parachain node to sync the chain. This is very similar to running a Polkadot node, with the addition of some extra flags. You can download the latest release of the [`polkadot-parachain` binary](https://github.com/paritytech/polkadot-sdk/releases/latest/) or build it from [source](https://github.com/paritytech/polkadot-sdk/) with the following commands:
+
 ```bash
-$ cargo build --release --locked --bin polkadot-parachain
+cargo build --release --locked --bin polkadot-parachain
 ```
 
 Another alternative is using Docker, this is more advanced, so it's best left up to those already familiar with docker or who have completed the other set-up instructions:
+
 ```bash
 $ docker run -p 9944:9944 -p 9615:9615 parity/polkadot:latest \
 \ --chain asset-hub-polkadot
 \ --rpc-external
 \ --prometheus-external
 ```
+
 And then run the node with:
+
 ```bash
-$ ./target/release/polkadot-parachain --chain asset-hub-polkadot
+./target/release/polkadot-parachain --chain asset-hub-polkadot
 ```
 
 #### Types of Nodes
@@ -42,11 +47,11 @@ There are several node types, each with it's use case, but generally the most re
 
 An **archive node** can become a **full node**, but for a **full node** to become an **archive node**, you must first purge your database and resync your node, starting in archive mode.
 
-You can run the Polkadot Relay Chain with specifying `--pruning` other than `archive`, but the Polkadot Asset Hub should be run as an `archive` node. 
+You can run the Polkadot Relay Chain with specifying `--pruning` other than `archive`, but the Polkadot Asset Hub should be run as an `archive` node.
 
 #### Hardware requirements
 
-Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node. 
+Currently there are no hardware requirements specific for the collator nodes, since they don't perform time-critical tasks. The only requirement is to have enough storage for the type of node intended, which can be retrieved from [here](https://stakeworld.io/docs/dbsize). Other than that, any relatively performant equipement or any cloud provider will suffice. You can also look into the [reference hardware](https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware) for validators, but be aware that these will probably be overkill for a non-validator node.
 
 #### NOS
 
@@ -60,7 +65,7 @@ NoS downloads and maintains archive nodes for at least one Relay Chain and one p
 
 ### Maintenance
 
-It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date. 
+It's good practice to keep your node up to date with the latest version, which you can download from [here](https://github.com/paritytech/polkadot-sdk/releases). It's also recommended to keep the tools you are using up to date.
 
 #### Runtime Upgrades
 
@@ -94,7 +99,7 @@ For an more details on general asset management in Asset Hub, refer to the [asse
 
 Foreign assets are those assets in Asset Hub whose native blockchain is not Asset Hub. These are mainly native tokens from other parachains or bridged tokens from other consensus systems (such as Ethereum). Once a foreign asset has been registered in Asset Hub (by its root origin), users are enabled to send this token from its native blockchain to Asset Hub and operate with it as if it was any other asset.
 
-Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of [the `assets` pallet](https://marketplace.substrate.io/pallets/pallet-assets/). Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call: 
+Practically speaking, foreign assets are handled by the `foreign-assets` pallet in Asset Hub, which is an instance of [the `assets` pallet](https://marketplace.substrate.io/pallets/pallet-assets/). Hence, this pallet exposes the same interface to users and other pallets as `assets` pallet. For example, to transfer a certain amount of a foreign asset (id) to an account (target), this pallet exposes the following call:
 
 ``` ts
 foreignAssets.transferKeepAlive(id, target, amount)
@@ -143,7 +148,6 @@ The two previous sections outline the process of monitoring XCM deposits to spec
    - The [event](https://hydradx.subscan.io/extrinsic/4597864-2?event=4597864-8) to look for in the Parachain side is called `xcmpqueue(XcmpMessageSent)`, and again the `message_hash` is one of the parameters of the event.
    - The corresponding [event](https://assethub-polkadot.subscan.io/extrinsic/5779603-0?event=5779603-4) in Asset Hub side is the `xcmpqueue(Success)` and the `message_hash` found in that event should have the same value as the one in Asset Hub.
    - In Asset Hub we will also see the event `foreignAssets(Issued)` which indicates that the foreign assets transferred have been minted on Asset Hub.
-
 
 ##### Monitoring of Failed XCM Transfers
 
@@ -211,11 +215,12 @@ We also have the option to use have Sidecar submit transactions to the node it's
   "hash": "txHash"
 }
 ```
+
 You can find more information about Sidecar in its [documentation](https://paritytech.github.io/substrate-api-sidecar/dist/).
 
 ##### Asset Transfer API
 
-Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub. 
+Asset-transfer-api is a library focused on simplifying the construction of asset transfers for Substrate based chains that involves system parachains like Polkadot Asset Hub.
 It exposes a reduced set of methods which facilitates users to send transfers to other (para) chains or locally.
 It covers the pallet `assets` and its instances `pool-assets` and `foreign-assets`, as well as local transactions.
 
@@ -228,8 +233,9 @@ constructing parachain transactions, you can use `txwrapper-polkadot` exactly as
 ### Examples
 
 Examples on how to manage foreign assets can be located in their corresponding directories:
-* [Polkadot-JS](/polkadot-js-example/README.md)
-* [Subxt](/subxt-example/README.md)
-* [Asset Transfer API](/asset-transfer-api-example/README.md)
+
+- [Polkadot-JS](/polkadot-js-example/README.md)
+- [Subxt](/subxt-example/README.md)
+- [Asset Transfer API](/asset-transfer-api-example/README.md)
 
 The instructions on how to run each example are located in it's respective `README` files.
