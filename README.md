@@ -248,5 +248,6 @@ Examples on how to build transactions to manage foreign assets can be located in
 - [Polkadot-JS](/polkadot-js-example/)
 - [Subxt](/subxt-example/)
 - [Asset Transfer API](/asset-transfer-api-example/)
+- [txwrapper](/txwrapper-example/)
 
 The instructions on how to run each example are located in it's respective `README` files.
