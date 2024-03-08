@@ -3,6 +3,12 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { KeyringPair } from "@polkadot/keyring/types";
 
+/**
+ * In this example we are creating a transaction with a foreignAssets.transferKeepAlive call to send foreign asset
+ * to another acount inside Polkadot Asset Hub. Then we subscribe to the transaction status and exit when the block 
+ * in which the transaction was included is finalized.
+ */
+
 async function main() {
     const RPC_ENDPOINT = 'wss://polkadot-asset-hub-rpc.dwellir.com';
 
