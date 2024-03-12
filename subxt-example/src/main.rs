@@ -51,7 +51,7 @@ async fn mock_transfer_keep_alive(
 
     let balance_transfer_tx = local::tx().foreign_assets().transfer_keep_alive(id, dest, amount);
 
-    // Here we send the Native asset transfer and wait for it to be finalized.
+    // Here we send the foreign asset transfer and wait for it to be finalized.
     let signed_tx = api
     .tx()
     .create_signed(&balance_transfer_tx, &alice_pair_signer, tx_config)
