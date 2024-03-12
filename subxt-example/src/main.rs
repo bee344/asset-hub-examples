@@ -59,7 +59,7 @@ async fn mock_transfer_keep_alive(
 
     // If we wanted to listen to the events to keep track of our tx
     // listening for the `AssetTxFeePaid` event that confirms we succesfully paid
-    // the fees with our custom asset
+    // the fees with USDt
     // let mut balance_transfer_progress = api
     // .tx()
     // .sign_and_submit_then_watch_default(&balance_transfer_tx, &alice_pair_signer, tx_config)
