@@ -1,8 +1,8 @@
 use subxt::{
     OnlineClient,
     config::{
-        Config, DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder, PolkadotConfig, SubstrateConfig, 
-        }, 
+        DefaultExtrinsicParamsBuilder, PolkadotConfig,
+        },
         utils::{
             AccountId32, MultiAddress
         }
@@ -20,80 +20,90 @@ use subxt_signer::sr25519::dev::{self};
 )]
 pub mod local {}
 
-pub enum AssetHubConfig {}
-
-impl Config for AssetHubConfig {
-    type Hash = <SubstrateConfig as Config>::Hash;
-    type AccountId = <SubstrateConfig as Config>::AccountId;
-    type Address = <PolkadotConfig as Config>::Address;
-    type Signature = <SubstrateConfig as Config>::Signature;
-    type Hasher = <SubstrateConfig as Config>::Hasher;
-    type Header = <SubstrateConfig as Config>::Header;
-    type ExtrinsicParams = DefaultExtrinsicParams<AssetHubConfig>;
-    // Here we use the MultiLocation from the metadata as a part of the config:
-    // The `ChargeAssetTxPayment` signed extension that is part of the ExtrinsicParams above, now uses the type:
-    type AssetId = MultiLocation;
-}
-
 // Types that we retrieve from the Metadata for our example
 type MultiLocation = local::runtime_types::staging_xcm::v3::multilocation::MultiLocation;
 
 use local::runtime_types::xcm::v3::junction::{
     NetworkId::Kusama,
-    Junction::GlobalConsensus
+    Junction::{GlobalConsensus},
 };
 use local::runtime_types::xcm::v3::junctions::Junctions::X1;
 
-// Asset details
-const ASSET_ID: MultiLocation = MultiLocation { 
+// Foreign asset details
+const ASSET_ID: MultiLocation = MultiLocation {
     parents: 2,
     interior: X1(GlobalConsensus(Kusama))
-}; 
+};
 
 const URI: &str = "wss://polkadot-asset-hub-rpc.polkadot.io";
 
-// Here we make a Native asset transfer while paying the tx fees with our custom
-// asset, using the `AssetConversionTxPayment` signed extension that we configured
-// as `ChargeAssetTxPayment`
+// Here we make a Native asset transfer while paying the tx fees with USDt
 async fn mock_transfer_keep_alive(
-    api: OnlineClient<AssetHubConfig>,
+    api: OnlineClient<PolkadotConfig>,
     id: MultiLocation,
     dest: MultiAddress<AccountId32, ()>,
     amount: u128,
 ) -> Result<(), subxt::Error> {
     let alice_pair_signer = dev::alice();
 
-    let tx_config = DefaultExtrinsicParamsBuilder::<AssetHubConfig>::new()
-        .build();
+    // We config the tx to pay the fees with USDt
+    let tx_config = DefaultExtrinsicParamsBuilder::<PolkadotConfig>::new().tip_of(0, 1984).build();
 
     let balance_transfer_tx = local::tx().foreign_assets().transfer_keep_alive(id, dest, amount);
-        
-    // Here we send the Native asset transfer and wait for it to be finalized, while
-    // listening for the `AssetTxFeePaid` event that confirms we succesfully paid
-    // the fees with our custom asset
+
+    // Here we send the Native asset transfer and wait for it to be finalized.
     let signed_tx = api
     .tx()
     .create_signed(&balance_transfer_tx, &alice_pair_signer, tx_config)
     .await?;
 
-    let dry_res = signed_tx.validate().await?;
-     
-    println!("Encoded extrinsic: 0x{}", hex::encode(signed_tx.encoded()));
+    // If we wanted to listen to the events to keep track of our tx
+    // listening for the `AssetTxFeePaid` event that confirms we succesfully paid
+    // the fees with our custom asset
+    // let mut balance_transfer_progress = api
+    // .tx()
+    // .sign_and_submit_then_watch_default(&balance_transfer_tx, &alice_pair_signer, tx_config)
+    // .await?;
+    //
+    // while let Some(status) = balance_transfer_progress.next().await {
+    //     match status? {
+    //         // It's finalized in a block!
+    //         TxStatus::InFinalizedBlock(in_block) => {
+    //             println!(
+    //                 "Transaction {:?} is finalized in block {:?}",
+    //                 in_block.extrinsic_hash(),
+    //                 in_block.block_hash()
+    //             );
+    //
+    //             // grab the events and fail if no ExtrinsicSuccess event seen:
+    //             let events = in_block.wait_for_success().await?;
+    //             // We can look for events (this uses the static interface; we can also iterate
+    //             // over them and dynamically decode them):
+    //             let transfer_event = events.find_first::<polkadot::balances::events::Transfer>()?;
+    //
+    //             if let Some(event) = transfer_event {
+    //                 println!("Balance transfer success: {event:?}");
+    //             } else {
+    //                 println!("Failed to find Balances::Transfer Event");
+    //             }
+    //         }
+    //         // Just log any other status we encounter:
+    //         other => {
+    //             println!("Status: {other:?}");
+    //         }
+    //     }
+    // }
 
-    println!("{:?}", dry_res);
+    println!("Encoded extrinsic: 0x{}", hex::encode(signed_tx.encoded()));
 
     Ok(())
 }
 
 #[tokio::main]
 async fn main() {
-    // Establish the uri of the local asset hub westend node to which we are 
-    // connecting to and instantiate the api
-    let api = OnlineClient::<AssetHubConfig>::from_url(URI).await.unwrap();
+    let api = OnlineClient::<PolkadotConfig>::from_url(URI).await.unwrap();
 
     let dest: MultiAddress<AccountId32, ()> = dev::bob().public_key().into();
 
-    // Here we create and submit the native asset transfer passing the custom 
-    // asset's MultiLocation to pay the fees
     let _result = mock_transfer_keep_alive(api.clone(), ASSET_ID, dest, 100000).await;
 }
