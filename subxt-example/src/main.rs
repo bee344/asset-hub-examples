@@ -37,7 +37,7 @@ const ASSET_ID: MultiLocation = MultiLocation {
 
 const URI: &str = "wss://polkadot-asset-hub-rpc.polkadot.io";
 
-// Here we make a Native asset transfer while paying the tx fees with USDt
+// Here we make a foreign asset transfer while paying the tx fees with USDt
 async fn mock_transfer_keep_alive(
     api: OnlineClient<PolkadotConfig>,
     id: MultiLocation,
