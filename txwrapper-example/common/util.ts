@@ -11,7 +11,7 @@ import { createMetadata, OptionsWithMeta } from '@substrate/txwrapper-polkadot';
 import { fetch } from 'undici';
 
 /**
- * Send a JSONRPC request to the node at wss://polkadot-asset-hub-rpc.dwellir.com.
+ * Send a JSONRPC request to the node at http://polkadot-asset-hub-rpc.dwellir.com.
  *
  * @param method - The JSONRPC request method.
  * @param params - The JSONRPC request params.
@@ -20,7 +20,7 @@ export function rpcToLocalNode(
 	method: string,
 	params: any[] = [],
 ): Promise<any> {
-	return fetch('wss://polkadot-asset-hub-rpc.dwellir.com', {
+	return fetch('http://localhost:9944', {
 		body: JSON.stringify({
 			id: 1,
 			jsonrpc: '2.0',
