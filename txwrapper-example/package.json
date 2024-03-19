@@ -3,8 +3,8 @@
   "packageManager": "yarn@4.1.0",
   "scripts": {
     "build": "substrate-exec-rimraf ./lib && substrate-exec-tsc",
-    "transfer": "node ./lib/foreignAssetTransfer.js",
-    "fee": "node ./lib/foreignAssetTransferWithFee.js"
+    "transfer": "node ./lib/src/foreignAssetTransfer.js",
+    "fee": "node ./lib/src/foreignAssetTransferWithFee.js"
   },
   "devDependencies": {
     "@polkadot/api": "^10.11.3",
