@@ -2,13 +2,16 @@
 subxt-example/target
 
 #txwrapper
-txwrapper/node_modules
-txwrapper/.yarn
+txwrapper-example/node_modules
+txwrapper-example/.yarn
+txwrapper-example/lib
 
 #polkadot-js-example
 polkadot-js-example/node_modules
 polkadot-js-example/.yarn
+polkadot-js-example/lib
 
 #asset-transfer-api
 asset-transfer-api-example/node_modules
 asset-transfer-api-example/.yarn
+asset-transfer-api-example/lib
