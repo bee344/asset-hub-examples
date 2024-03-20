@@ -96,7 +96,7 @@ async function main(): Promise<void> {
 		},
 		{
 			address: deriveAddress(alice.publicKey, PolkadotSS58Format.westend),
-            assetId: 1337,
+      assetId: { parents: 0, interior : { X2: [{PalletInstance: 50}, {GeneralIndex: 1337}]}},
 			blockHash,
 			blockNumber: registry
 				.createType('BlockNumber', block.header.number)
@@ -170,8 +170,8 @@ async function main(): Promise<void> {
 
 	console.log(
 		`\nDecoded Transaction\n  To: ${
-			(txInfo.method.args.dest as { id: string })?.id
-		}\n` + `  Amount: ${txInfo.method.args.value}\n`,
+			(txInfo.method.args.target as { id: string })?.id
+		}\n` + `  Amount: ${txInfo.method.args.amount}\n`,
 	);
 }
 

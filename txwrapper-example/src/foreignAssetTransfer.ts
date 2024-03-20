@@ -169,8 +169,8 @@ async function main(): Promise<void> {
 
 	console.log(
 		`\nDecoded Transaction\n  To: ${
-			(txInfo.method.args.dest as { id: string })?.id
-		}\n` + `  Amount: ${txInfo.method.args.value}\n`,
+			(txInfo.method.args.target as { id: string })?.id
+		}\n` + `  Amount: ${txInfo.method.args.amount}\n`,
 	);
 }
 
