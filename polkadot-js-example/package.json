@@ -7,9 +7,9 @@
     "fee": "node ./lib/foreignAssetTransferWithFee.js"
   },
   "devDependencies": {
-    "@polkadot/api": "^10.11.3",
+    "@polkadot/api": "^12.1.1",
     "@polkadot/keyring": "^12.6.2",
-    "@polkadot/types": "^10.11.3",
+    "@polkadot/types": "^12.1.1",
     "@polkadot/util-crypto": "^12.6.2",
     "@substrate/dev": "^0.7.1"
   }

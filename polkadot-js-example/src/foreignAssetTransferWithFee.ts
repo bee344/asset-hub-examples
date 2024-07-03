@@ -10,7 +10,7 @@ import { KeyringPair } from "@polkadot/keyring/types";
  */
 
 async function main() {
-    const RPC_ENDPOINT = 'wss://polkadot-asset-hub-rpc.dwellir.com';
+    const RPC_ENDPOINT = 'wss://statemint.api.onfinality.io/public-ws';
 
     const wsProvider = new WsProvider(RPC_ENDPOINT);
 
@@ -35,9 +35,19 @@ async function main() {
         }
     }
 
-    const assetForFees = '1984';
+    const assetForFees = {
+        parents: 0,
+        interior: {
+            X2: [{
+                palletInstance: 50
+            },
+            {
+                generalIndex: 1984
+            }]
+        }
+    };
 
-    const mockTx = await api.tx.foreignAssets.transfer(FOREIGN_ASSET, bob.address, 100000000).signAsync(alice, { assetId: assetForFees});
+    const mockTx = await api.tx.foreignAssets.transfer(FOREIGN_ASSET, bob.address, 100000000).signAsync(alice, { assetId: assetForFees });
 
     console.log(mockTx.toHuman());
 
