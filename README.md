@@ -1,4 +1,4 @@
-# Polkadot Asset Hub
+# Polkadot Asset Hub and Foreign Assets
 
 ## Overview
 
